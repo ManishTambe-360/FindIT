@@ -32,3 +32,17 @@ exports.protect = async (req, res, next) => {
     next(err);
   }
 };
+// Attaches req.user if a valid token is sent, but never blocks the request
+exports.optionalAuth = async (req, res, next) => {
+  try {
+    const header = req.headers.authorization;
+    if (header && header.startsWith('Bearer ')) {
+      const decoded = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET);
+      const user = await User.findById(decoded.id);
+      if (user && !user.isBlocked) req.user = user;
+    }
+  } catch (err) {
+    // ignore invalid tokens, treat as guest
+  }
+  next();
+};

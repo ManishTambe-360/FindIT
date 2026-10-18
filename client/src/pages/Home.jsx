@@ -10,14 +10,17 @@ export default function Home() {
         A smart lost and found platform that matches lost items with found ones,
         so belongings get back to their owners faster.
       </p>
-      <div className="mt-8 flex justify-center gap-4">
-        <Link to="/register" className="rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white hover:bg-indigo-700">
-          Get started
+      <div className="mt-8 flex flex-wrap justify-center gap-4">
+        <Link to="/browse" className="rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white hover:bg-indigo-700">
+            Browse items
         </Link>
-        <Link to="/login" className="rounded-lg border px-6 py-3 font-medium hover:bg-white">
-          Login
+        <Link to="/report?type=lost" className="rounded-lg border px-6 py-3 font-medium hover:bg-white">
+            I lost something
         </Link>
-      </div>
+        <Link to="/report?type=found" className="rounded-lg border px-6 py-3 font-medium hover:bg-white">
+            I found something
+        </Link>
+        </div>
     </div>
   );
 }

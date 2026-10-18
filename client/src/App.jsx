@@ -6,6 +6,9 @@ import Footer from './components/common/Footer';
 import ProtectedRoute from './components/common/ProtectedRoute';
 
 import Home from './pages/Home';
+import Browse from './pages/Browse';
+import ItemDetails from './pages/ItemDetails';
+import ReportItem from './pages/ReportItem';
 import NotFound from './pages/NotFound';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -23,14 +26,13 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          <Route
-            path="/dashboard"
-            element={<ProtectedRoute><MyReports /></ProtectedRoute>}
-          />
-          <Route
-            path="/admin"
-            element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>}
-          />
+          <Route path="/browse" element={<Browse />} />
+          <Route path="/items/:id" element={<ItemDetails />} />
+
+          <Route path="/report" element={<ProtectedRoute><ReportItem /></ProtectedRoute>} />
+          <Route path="/items/:id/edit" element={<ProtectedRoute><ReportItem /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><MyReports /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
