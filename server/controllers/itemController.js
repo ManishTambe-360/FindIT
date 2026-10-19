@@ -1,4 +1,6 @@
 const Item = require('../models/Item');
+const Claim = require('../models/Claim');
+const User = require('../models/User');
 const { uploadBuffer, deleteImages } = require('../config/cloudinary');
 
 const MAX_IMAGES = 4;
@@ -214,7 +216,7 @@ exports.getItem = async (req, res, next) => {
       req.user && (req.user.role === 'admin' || (item.postedBy && item.postedBy._id.equals(req.user._id)));
 
     obj.hasVerificationQuestion = Boolean(item.verificationQuestion);
-    if (!canSeeQuestion) delete obj.verificationQuestion; // claimants get it in Phase 4
+    if (!req.user) delete obj.verificationQuestion; // claimants get it in Phase 4
 
     res.json({ item: obj });
   } catch (err) {
@@ -297,7 +299,7 @@ exports.updateItem = async (req, res, next) => {
 };
 
 // ---------- PATCH /api/items/:id/status ----------
-// Owner can reopen or mark as returned. ("claimed" is set by the claim flow in Phase 4)
+// Owner can reopen or mark as returned. ("claimed" is set by the claim flow)
 exports.updateStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
@@ -314,6 +316,32 @@ exports.updateStatus = async (req, res, next) => {
     if (!isOwnerOrAdmin(item, req.user)) {
       res.status(403);
       throw new Error('Not allowed');
+    }
+
+    if (status === 'open') {
+      // Reopening cancels any approved claim
+      await Claim.updateMany(
+        { item: item._id, status: 'approved' },
+        { status: 'withdrawn', ownerNote: 'The item was reopened by the poster' }
+      );
+    }
+
+    if (status === 'returned') {
+      // Nobody can claim an item that is already back with its owner
+      await Claim.updateMany(
+        { item: item._id, status: 'pending' },
+        { status: 'rejected', ownerNote: 'The item was marked as returned' }
+      );
+
+      // Reputation: +10 to the finder, once per item, only if a claim was approved
+      if (!item.pointsAwarded) {
+        const approved = await Claim.findOne({ item: item._id, status: 'approved' });
+        if (approved) {
+          const finderId = item.type === 'found' ? item.postedBy : approved.claimant;
+          await User.findByIdAndUpdate(finderId, { $inc: { reputationPoints: 10 } });
+          item.pointsAwarded = true;
+        }
+      }
     }
 
     item.status = status;
@@ -338,6 +366,7 @@ exports.deleteItem = async (req, res, next) => {
     }
 
     await deleteImages(item.images.map((i) => i.publicId));
+    await Claim.deleteMany({ item: item._id });
     await item.deleteOne();
     res.json({ message: 'Item deleted' });
   } catch (err) {

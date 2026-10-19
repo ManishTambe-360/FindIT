@@ -40,6 +40,7 @@ const itemSchema = new mongoose.Schema(
     verificationQuestion: { type: String, trim: true, default: '' },
     verificationAnswer: { type: String, select: false, default: '' },
 
+    pointsAwarded: { type: Boolean, default: false }, // reputation is given only once per item
     postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }

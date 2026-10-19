@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const itemRoutes = require('./routes/itemRoutes');
+const claimRoutes = require('./routes/claimRoutes'); 
 
 const authRoutes = require('./routes/authRoutes');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
@@ -17,6 +18,7 @@ if (process.env.NODE_ENV !== 'production') app.use(morgan('dev'));
 app.get('/api/health', (req, res) => res.json({ status: 'FindIt API running' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
+app.use('/api/claims', claimRoutes);  
 
 app.use(notFound);
 app.use(errorHandler);

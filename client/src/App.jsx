@@ -7,14 +7,15 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 
 import Home from './pages/Home';
 import Browse from './pages/Browse';
+import MapPage from './pages/MapPage';
 import ItemDetails from './pages/ItemDetails';
 import ReportItem from './pages/ReportItem';
 import NotFound from './pages/NotFound';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import MyReports from './pages/dashboard/MyReports';
+import MyClaims from './pages/dashboard/MyClaims';
 import AdminDashboard from './pages/admin/AdminDashboard';
-import MapPage from './pages/MapPage';
 
 export default function App() {
   return (
@@ -28,12 +29,13 @@ export default function App() {
           <Route path="/register" element={<Register />} />
 
           <Route path="/browse" element={<Browse />} />
-          <Route path="/map" element={<MapPage />} /> 
+          <Route path="/map" element={<MapPage />} />
           <Route path="/items/:id" element={<ItemDetails />} />
 
           <Route path="/report" element={<ProtectedRoute><ReportItem /></ProtectedRoute>} />
           <Route path="/items/:id/edit" element={<ProtectedRoute><ReportItem /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><MyReports /></ProtectedRoute>} />
+          <Route path="/claims" element={<ProtectedRoute><MyClaims /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
 
           <Route path="*" element={<NotFound />} />

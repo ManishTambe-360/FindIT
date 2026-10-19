@@ -43,3 +43,10 @@ export const haversineKm = (lat1, lng1, lat2, lng2) => {
 
 export const formatDistance = (km) =>
   km < 1 ? `${Math.round(km * 1000)} m away` : `${km.toFixed(1)} km away`;
+
+export const CLAIM_STYLES = {
+  pending: 'bg-amber-100 text-amber-700',
+  approved: 'bg-green-100 text-green-700',
+  rejected: 'bg-red-100 text-red-700',
+  withdrawn: 'bg-slate-200 text-slate-600',
+};
