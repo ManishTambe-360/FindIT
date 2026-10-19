@@ -74,48 +74,117 @@ exports.createItem = async (req, res, next) => {
   }
 };
 
+// ---------- shared filter builder (used by list + map) ----------
+const buildFilter = (q) => {
+  const { type, category, status, search, from, to, lat, lng, radius } = q;
+  const filter = {};
+
+  if (type) filter.type = type;
+  if (category) filter.category = category;
+  if (status) filter.status = status;
+
+  if (search && search.trim()) {
+    const rx = new RegExp(escapeRegex(search.trim()), 'i');
+    filter.$or = [{ title: rx }, { description: rx }, { address: rx }];
+  }
+
+  if (from || to) {
+    filter.date = {};
+    if (from) filter.date.$gte = new Date(from);
+    if (to) filter.date.$lte = new Date(to);
+  }
+
+  // "Near me": items within `radius` km of (lat, lng)
+  let geo = null;
+  if (lat !== undefined && lat !== '' && lng !== undefined && lng !== '') {
+    const la = parseFloat(lat);
+    const ln = parseFloat(lng);
+    if (!Number.isNaN(la) && !Number.isNaN(ln)) {
+      const km = Math.min(parseFloat(radius) || 5, 100);
+      geo = { lat: la, lng: ln, km };
+      filter.location = { $geoWithin: { $centerSphere: [[ln, la], km / 6378.1] } };
+    }
+  }
+
+  return { filter, geo };
+};
+
+const SORTS = {
+  newest: { createdAt: -1 },
+  oldest: { createdAt: 1 },
+  date_desc: { date: -1 }, // most recent lost/found date first
+  date_asc: { date: 1 },
+};
+
 // ---------- GET /api/items ----------
-// Query: type, category, status, search, from, to, lat, lng, radius(km), page, limit
+// Query: type, category, status, search, from, to, lat, lng, radius(km),
+//        sort (newest | oldest | date_desc | date_asc | nearest), page, limit
 exports.getItems = async (req, res, next) => {
   try {
-    const { type, category, status, search, from, to, lat, lng, radius } = req.query;
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 12, 50);
+    const sort = req.query.sort || 'newest';
+    const { filter, geo } = buildFilter(req.query);
 
-    const filter = {};
-    if (type) filter.type = type;
-    if (category) filter.category = category;
-    if (status) filter.status = status;
+    const total = await Item.countDocuments(filter);
+    let items;
 
-    if (search && search.trim()) {
-      const rx = new RegExp(escapeRegex(search.trim()), 'i');
-      filter.$or = [{ title: rx }, { description: rx }, { address: rx }];
-    }
-
-    if (from || to) {
-      filter.date = {};
-      if (from) filter.date.$gte = new Date(from);
-      if (to) filter.date.$lte = new Date(to);
-    }
-
-    // "Near me": items within `radius` km of (lat, lng)
-    if (lat && lng) {
-      const km = parseFloat(radius) || 5;
-      filter.location = {
-        $geoWithin: { $centerSphere: [[parseFloat(lng), parseFloat(lat)], km / 6378.1] },
-      };
-    }
-
-    const [items, total] = await Promise.all([
-      Item.find(filter)
-        .sort({ createdAt: -1 })
+    if (sort === 'nearest' && geo) {
+      // $geoNear sorts by distance. ($near can't be used with countDocuments.)
+      const { location, ...rest } = filter; // $geoNear applies the radius itself
+      items = await Item.aggregate([
+        {
+          $geoNear: {
+            near: { type: 'Point', coordinates: [geo.lng, geo.lat] },
+            distanceField: 'distance',
+            maxDistance: geo.km * 1000, // metres
+            spherical: true,
+            query: rest,
+          },
+        },
+        { $skip: (page - 1) * limit },
+        { $limit: limit },
+        // aggregate() ignores `select: false`, so hide private fields manually
+        { $project: { verificationAnswer: 0, verificationQuestion: 0 } },
+      ]);
+      items = await Item.populate(items, { path: 'postedBy', select: 'name' });
+    } else {
+      items = await Item.find(filter)
+        .sort(SORTS[sort] || SORTS.newest)
         .skip((page - 1) * limit)
         .limit(limit)
-        .populate('postedBy', 'name'),
+        .select('-verificationQuestion')
+        .populate('postedBy', 'name');
+    }
+
+    res.json({ items, page, pages: Math.ceil(total / limit) || 1, total });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ---------- GET /api/items/map ----------
+// Lightweight payload for map pins (no descriptions, only the first image)
+exports.getMapItems = async (req, res, next) => {
+  try {
+    const LIMIT = 500;
+    const { filter } = buildFilter(req.query);
+
+    const [docs, total] = await Promise.all([
+      Item.find(filter)
+        .sort({ createdAt: -1 })
+        .limit(LIMIT)
+        .select('type title category status location address date images')
+        .lean(),
       Item.countDocuments(filter),
     ]);
 
-    res.json({ items, page, pages: Math.ceil(total / limit) || 1, total });
+    const items = docs.map(({ images, ...rest }) => ({
+      ...rest,
+      image: images?.[0]?.url || null,
+    }));
+
+    res.json({ items, total, truncated: total > LIMIT });
   } catch (err) {
     next(err);
   }

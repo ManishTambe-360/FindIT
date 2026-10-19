@@ -1,6 +1,6 @@
 const express = require('express');
 const {
-  createItem, getItems, getMyItems, getItem, updateItem, updateStatus, deleteItem,
+  createItem, getItems, getMapItems, getMyItems, getItem, updateItem, updateStatus, deleteItem,
 } = require('../controllers/itemController');
 const { protect, optionalAuth } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
@@ -8,6 +8,7 @@ const upload = require('../middleware/uploadMiddleware');
 const router = express.Router();
 
 router.get('/', getItems);
+router.get('/map', getMapItems);          // must be above '/:id'
 router.get('/mine', protect, getMyItems); // must be above '/:id'
 router.get('/:id', optionalAuth, getItem);
 

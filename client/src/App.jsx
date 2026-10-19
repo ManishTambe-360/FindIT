@@ -14,6 +14,7 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import MyReports from './pages/dashboard/MyReports';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import MapPage from './pages/MapPage';
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/register" element={<Register />} />
 
           <Route path="/browse" element={<Browse />} />
+          <Route path="/map" element={<MapPage />} /> 
           <Route path="/items/:id" element={<ItemDetails />} />
 
           <Route path="/report" element={<ProtectedRoute><ReportItem /></ProtectedRoute>} />

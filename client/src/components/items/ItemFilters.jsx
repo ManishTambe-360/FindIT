@@ -5,15 +5,30 @@ export default function ItemFilters({ filters, onChange, onReset }) {
   const set = (name, value) => onChange({ ...filters, [name]: value });
 
   const toggleNear = (checked) => {
-    if (!checked) return onChange({ ...filters, near: false, lat: '', lng: '' });
+    if (!checked) {
+      return onChange({
+        ...filters,
+        near: false,
+        lat: '',
+        lng: '',
+        sort: filters.sort === 'nearest' ? 'newest' : filters.sort,
+      });
+    }
     if (!navigator.geolocation) return toast.error('Geolocation not supported');
     navigator.geolocation.getCurrentPosition(
       (pos) =>
-        onChange({ ...filters, near: true, lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        onChange({
+          ...filters,
+          near: true,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          sort: 'nearest',
+        }),
       () => toast.error('Could not get your location')
     );
   };
 
+  const nearReady = filters.near && filters.lat !== '';
   const field = 'w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-indigo-500';
 
   return (
@@ -44,9 +59,12 @@ export default function ItemFilters({ filters, onChange, onReset }) {
           <option value="">Any status</option>
         </select>
 
-        <button onClick={onReset} className="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50">
-          Reset filters
-        </button>
+        <select value={filters.sort} onChange={(e) => set('sort', e.target.value)} className={field}>
+          <option value="newest">Sort: Newest posted</option>
+          <option value="oldest">Sort: Oldest posted</option>
+          <option value="date_desc">Sort: Latest lost/found date</option>
+          <option value="nearest" disabled={!nearReady}>Sort: Nearest first</option>
+        </select>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -59,7 +77,7 @@ export default function ItemFilters({ filters, onChange, onReset }) {
           <input type="date" value={filters.to} onChange={(e) => set('to', e.target.value)} className={field} />
         </label>
 
-        <label className="col-span-2 flex items-end gap-2 pb-2 text-sm">
+        <label className="flex items-end gap-2 pb-2 text-sm md:col-span-1">
           <input type="checkbox" checked={filters.near} onChange={(e) => toggleNear(e.target.checked)} />
           Near me within
           <select
@@ -71,6 +89,12 @@ export default function ItemFilters({ filters, onChange, onReset }) {
             {[1, 2, 5, 10, 25].map((r) => <option key={r} value={r}>{r} km</option>)}
           </select>
         </label>
+
+        <div className="flex items-end">
+          <button onClick={onReset} className="w-full rounded-lg border px-3 py-2 text-sm hover:bg-slate-50">
+            Reset filters
+          </button>
+        </div>
       </div>
     </div>
   );

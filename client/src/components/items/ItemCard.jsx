@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import { STATUS_STYLES, TYPE_STYLES, formatDate } from '../../utils/helpers';
+import { STATUS_STYLES, TYPE_STYLES, formatDate, formatDistance } from '../../utils/helpers';
 
-export default function ItemCard({ item }) {
+export default function ItemCard({ item, distanceKm = null }) {
   const image = item.images?.[0]?.url;
 
   return (
@@ -18,6 +18,11 @@ export default function ItemCard({ item }) {
         <span className={`absolute left-2 top-2 rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${TYPE_STYLES[item.type]}`}>
           {item.type}
         </span>
+        {distanceKm !== null && (
+          <span className="absolute right-2 top-2 rounded-full bg-white/90 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+            {formatDistance(distanceKm)}
+          </span>
+        )}
       </div>
 
       <div className="space-y-1 p-4">

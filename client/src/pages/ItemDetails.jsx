@@ -4,7 +4,8 @@ import toast from 'react-hot-toast';
 import Loader from '../components/common/Loader';
 import MapView from '../components/map/MapView';
 import useAuth from '../hooks/useAuth';
-import { deleteItem, getItem, updateItemStatus } from '../services/itemService';
+import ItemCard from '../components/items/ItemCard';
+import { deleteItem, getItem, getItems, updateItemStatus } from '../services/itemService';
 import { STATUS_STYLES, TYPE_STYLES, formatDate } from '../utils/helpers';
 
 export default function ItemDetails() {
@@ -15,12 +16,25 @@ export default function ItemDetails() {
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState(0);
 
-  useEffect(() => {
+  const [nearby, setNearby] = useState([]);
+
+    useEffect(() => {
+    setLoading(true);
+    setActive(0);
     getItem(id)
-      .then((res) => setItem(res.data.item))
-      .catch(() => setItem(null))
-      .finally(() => setLoading(false));
-  }, [id]);
+        .then((res) => setItem(res.data.item))
+        .catch(() => setItem(null))
+        .finally(() => setLoading(false));
+    }, [id]);
+
+    // Other open reports within 1 km of this item
+    useEffect(() => {
+    if (!item) return;
+    const [lng, lat] = item.location.coordinates;
+    getItems({ lat, lng, radius: 1, limit: 5, status: 'open' })
+        .then((res) => setNearby(res.data.items.filter((i) => i._id !== item._id).slice(0, 4)))
+        .catch(() => {});
+    }, [item?._id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <Loader />;
   if (!item) {
@@ -123,9 +137,28 @@ export default function ItemDetails() {
 
       {/* Map */}
       <div className="md:col-span-2">
-        <h2 className="mb-2 font-semibold">Location</h2>
+        <div className="mb-2 flex items-center justify-between">
+            <h2 className="font-semibold">Location</h2>
+            <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm text-indigo-600 underline"
+            >
+            Get directions
+            </a>
+        </div>
         <MapView position={[lat, lng]} />
       </div>
+
+      {nearby.length > 0 && (
+      <div className="md:col-span-2">
+        <h2 className="mb-3 font-semibold">Other reports within 1 km</h2>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+         {nearby.map((i) => <ItemCard key={i._id} item={i} />)}
+        </div>
+      </div>
+      )}
     </div>
   );
 }

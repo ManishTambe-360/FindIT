@@ -5,10 +5,11 @@ import ItemCard from '../components/items/ItemCard';
 import ItemFilters from '../components/items/ItemFilters';
 import Loader from '../components/common/Loader';
 import { getItems } from '../services/itemService';
+import { haversineKm } from '../utils/helpers';
 
 const initialFilters = {
   search: '', type: '', category: '', status: 'open',
-  from: '', to: '', near: false, lat: '', lng: '', radius: 5,
+  from: '', to: '', near: false, lat: '', lng: '', radius: 5, sort: 'newest',
 };
 
 export default function Browse() {
@@ -22,7 +23,7 @@ export default function Browse() {
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const params = { page, limit: 9 };
+        const params = { page, limit: 9, sort: filters.sort };
         ['search', 'type', 'category', 'status', 'from', 'to'].forEach((k) => {
           if (filters[k]) params[k] = filters[k];
         });
@@ -47,11 +48,20 @@ export default function Browse() {
     setPage(1);
   };
 
+  const distanceFor = (item) => {
+    if (!filters.near || filters.lat === '') return null;
+    const [lng, lat] = item.location.coordinates;
+    return haversineKm(Number(filters.lat), Number(filters.lng), lat, lng);
+  };
+
   return (
     <div className="space-y-6 py-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Browse items</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Link to="/map" className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-white">
+            View on map
+          </Link>
           <Link to="/report?type=lost" className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
             I lost something
           </Link>
@@ -71,7 +81,9 @@ export default function Browse() {
         <>
           <p className="text-sm text-slate-500">{data.total} item(s) found</p>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {data.items.map((item) => <ItemCard key={item._id} item={item} />)}
+            {data.items.map((item) => (
+              <ItemCard key={item._id} item={item} distanceKm={distanceFor(item)} />
+            ))}
           </div>
 
           {data.pages > 1 && (

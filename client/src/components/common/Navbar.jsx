@@ -23,6 +23,7 @@ export default function Navbar() {
           <Link to="/" className="hover:text-indigo-600">Home</Link>
           <Link to="/browse" className="hover:text-indigo-600">Browse</Link>
           <Link to="/report" className="hover:text-indigo-600">Report</Link>
+          <Link to="/map" className="hover:text-indigo-600">Map</Link>
 
           {user ? (
             <>
