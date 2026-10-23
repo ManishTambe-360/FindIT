@@ -1,6 +1,8 @@
 const Item = require('../models/Item');
 const Claim = require('../models/Claim');
 const User = require('../models/User');
+const Match = require('../models/Match');
+const { runMatchingInBackground } = require('../utils/matchingAlgorithm');
 const { uploadBuffer, deleteImages } = require('../config/cloudinary');
 
 const MAX_IMAGES = 4;
@@ -69,6 +71,7 @@ exports.createItem = async (req, res, next) => {
       postedBy: req.user._id,
     });
 
+    runMatchingInBackground(item); // Phase 5: look for possible lost/found pairs
     res.status(201).json({ item });
   } catch (err) {
     if (uploaded.length) await deleteImages(uploaded.map((i) => i.publicId));
@@ -290,6 +293,7 @@ exports.updateItem = async (req, res, next) => {
 
     await item.save();
     await deleteImages(removed.map((i) => i.publicId));
+    runMatchingInBackground(item); // details may have changed, so re-score
 
     res.json({ item });
   } catch (err) {
@@ -346,6 +350,7 @@ exports.updateStatus = async (req, res, next) => {
 
     item.status = status;
     await item.save();
+    if (status === 'open') runMatchingInBackground(item);
     res.json({ item });
   } catch (err) {
     next(err);
@@ -367,6 +372,7 @@ exports.deleteItem = async (req, res, next) => {
 
     await deleteImages(item.images.map((i) => i.publicId));
     await Claim.deleteMany({ item: item._id });
+    await Match.deleteMany({ $or: [{ lostItem: item._id }, { foundItem: item._id }] });
     await item.deleteOne();
     res.json({ message: 'Item deleted' });
   } catch (err) {

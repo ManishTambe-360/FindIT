@@ -15,6 +15,7 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import MyReports from './pages/dashboard/MyReports';
 import MyClaims from './pages/dashboard/MyClaims';
+import Chats from './pages/dashboard/Chats';
 import AdminDashboard from './pages/admin/AdminDashboard';
 
 export default function App() {
@@ -36,6 +37,8 @@ export default function App() {
           <Route path="/items/:id/edit" element={<ProtectedRoute><ReportItem /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><MyReports /></ProtectedRoute>} />
           <Route path="/claims" element={<ProtectedRoute><MyClaims /></ProtectedRoute>} />
+          <Route path="/chats" element={<ProtectedRoute><Chats /></ProtectedRoute>} />
+          <Route path="/chats/:id" element={<ProtectedRoute><Chats /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
 
           <Route path="*" element={<NotFound />} />

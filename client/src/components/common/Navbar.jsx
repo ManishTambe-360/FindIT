@@ -3,12 +3,16 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import useAuth from '../../hooks/useAuth';
 import { getPendingCount } from '../../services/claimService';
+import { getUnreadChatCount } from '../../services/chatService';
+import { useSocket } from '../../context/SocketContext';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const socket = useSocket();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [pending, setPending] = useState(0);
+  const [unreadChats, setUnreadChats] = useState(0);
 
   // Refresh the badge on every page change, and once a minute
   useEffect(() => {
@@ -28,6 +32,26 @@ export default function Navbar() {
       clearInterval(timer);
     };
   }, [user, pathname]);
+
+  // Unread chat badge: refresh on page change and whenever a message/read event arrives
+  useEffect(() => {
+    if (!user) return undefined;
+    let alive = true;
+    const load = () =>
+      getUnreadChatCount()
+        .then((res) => alive && setUnreadChats(res.data.count))
+        .catch(() => {});
+    load();
+    // small delay so the server has stored the read/unread change first
+    const onEvent = () => setTimeout(load, 300);
+    socket?.on('chat:message', onEvent);
+    socket?.on('chat:read', onEvent);
+    return () => {
+      alive = false;
+      socket?.off('chat:message', onEvent);
+      socket?.off('chat:read', onEvent);
+    };
+  }, [user, pathname, socket]);
 
   const handleLogout = () => {
     logout();
@@ -56,6 +80,14 @@ export default function Navbar() {
                 {pending > 0 && (
                   <span className="absolute -right-4 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs text-white">
                     {pending}
+                  </span>
+                )}
+              </Link>
+              <Link to="/chats" className="relative hover:text-indigo-600">
+                Messages
+                {unreadChats > 0 && (
+                  <span className="absolute -right-4 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-600 px-1 text-xs text-white">
+                    {unreadChats}
                   </span>
                 )}
               </Link>
