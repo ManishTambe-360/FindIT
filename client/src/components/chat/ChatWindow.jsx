@@ -29,6 +29,7 @@ export default function ChatWindow({ conversationId, onActivity }) {
         setMessages(res.data.messages);
         setHasMore(res.data.hasMore);
         onActivity?.();
+        window.dispatchEvent(new Event('notifications:changed'));
       })
       .catch((err) => toast.error(err.response?.data?.message || 'Could not open chat'))
       .finally(() => setLoading(false));

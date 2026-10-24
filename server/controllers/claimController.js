@@ -1,5 +1,6 @@
 const Claim = require('../models/Claim');
 const Item = require('../models/Item');
+const { notify } = require('../utils/notify');
 
 const MAX_ATTEMPTS = 3;
 
@@ -58,6 +59,14 @@ exports.createClaim = async (req, res, next) => {
       message,
       answer,
       answerMatches,
+    });
+
+    notify(item.postedBy, {
+      type: 'claim_new',
+      title: `${req.user.name} claimed "${item.title}"`,
+      body: message.slice(0, 200),
+      link: '/claims?tab=received',
+      item: item._id,
     });
 
     // The claimant is deliberately NOT told whether the answer matched
@@ -154,6 +163,14 @@ exports.updateClaimStatus = async (req, res, next) => {
       }
       claim.status = 'withdrawn';
       await claim.save();
+      const wItem = await Item.findById(claim.item).select('title');
+      notify(claim.itemOwner, {
+        type: 'claim_withdrawn',
+        title: `${req.user.name} withdrew their claim`,
+        body: wItem ? `On "${wItem.title}"` : '',
+        link: '/claims?tab=received',
+        item: claim.item,
+      });
       return res.json({ claim });
     }
 
@@ -166,6 +183,14 @@ exports.updateClaimStatus = async (req, res, next) => {
       claim.status = 'rejected';
       claim.ownerNote = (ownerNote || '').trim().slice(0, 300);
       await claim.save();
+      const rItem = await Item.findById(claim.item).select('title');
+      notify(claim.claimant, {
+        type: 'claim_rejected',
+        title: `Your claim on "${rItem?.title || 'an item'}" was rejected`,
+        body: claim.ownerNote,
+        link: `/items/${claim.item}`,
+        item: claim.item,
+      });
       return res.json({ claim });
     }
 
@@ -183,9 +208,27 @@ exports.updateClaimStatus = async (req, res, next) => {
     await item.save();
 
     // Everyone else waiting on this item is auto-rejected
+    const others = await Claim.find({ item: item._id, _id: { $ne: claim._id }, status: 'pending' }).select('claimant');
     await Claim.updateMany(
       { item: item._id, _id: { $ne: claim._id }, status: 'pending' },
       { status: 'rejected', ownerNote: 'Another claim was approved for this item' }
+    );
+
+    notify(claim.claimant, {
+      type: 'claim_approved',
+      title: `Your claim on "${item.title}" was approved 🎉`,
+      body: 'Open the item to see the contact details and arrange the handover.',
+      link: `/items/${item._id}`,
+      item: item._id,
+    });
+    others.forEach((c) =>
+      notify(c.claimant, {
+        type: 'claim_rejected',
+        title: `Your claim on "${item.title}" was rejected`,
+        body: 'Another claim was approved for this item',
+        link: `/items/${item._id}`,
+        item: item._id,
+      })
     );
 
     res.json({ claim });

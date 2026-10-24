@@ -16,7 +16,10 @@ import Register from './pages/auth/Register';
 import MyReports from './pages/dashboard/MyReports';
 import MyClaims from './pages/dashboard/MyClaims';
 import Chats from './pages/dashboard/Chats';
+import Notifications from './pages/dashboard/Notifications';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import ManageUsers from './pages/admin/ManageUsers';
+import ManageItems from './pages/admin/ManageItems';
 
 export default function App() {
   return (
@@ -39,7 +42,10 @@ export default function App() {
           <Route path="/claims" element={<ProtectedRoute><MyClaims /></ProtectedRoute>} />
           <Route path="/chats" element={<ProtectedRoute><Chats /></ProtectedRoute>} />
           <Route path="/chats/:id" element={<ProtectedRoute><Chats /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute roles={['admin']}><ManageUsers /></ProtectedRoute>} />
+          <Route path="/admin/items" element={<ProtectedRoute roles={['admin']}><ManageItems /></ProtectedRoute>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

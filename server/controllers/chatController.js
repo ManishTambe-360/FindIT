@@ -2,6 +2,8 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Item = require('../models/Item');
 const { emitToUser, isOnline } = require('../sockets/socketHandler');
+const Notification = require('../models/Notification');
+const { notify } = require('../utils/notify');
 
 const PAGE_SIZE = 30;
 
@@ -120,6 +122,8 @@ exports.getMessages = async (req, res, next) => {
 
 const markRead = async (convo, userId) => {
   const uid = userId.toString();
+  // reading the chat also clears its "new message" notification
+  await Notification.updateMany({ user: userId, conversation: convo._id, read: false }, { read: true });
   if (!(convo.unread?.get(uid) > 0)) return;
   const now = new Date();
   await Message.updateMany(
@@ -169,6 +173,26 @@ exports.sendMessage = async (req, res, next) => {
     // Push to everyone in the thread (including my other tabs)
     const payload = { conversationId: convo._id.toString(), message: message.toObject() };
     convo.participants.forEach((p) => emitToUser(p, 'chat:message', payload));
+
+    // Online users already see the live chat badge. For offline users, leave ONE
+    // unread notification per conversation (no spam for every message).
+    convo.participants
+      .filter((p) => p.toString() !== me && !isOnline(p))
+      .forEach((p) => {
+        Notification.exists({ user: p, conversation: convo._id, read: false })
+          .then((already) => {
+            if (already) return;
+            notify(p, {
+              type: 'message',
+              title: `New message from ${req.user.name}`,
+              body: text.slice(0, 120),
+              link: `/chats/${convo._id}`,
+              conversation: convo._id,
+              item: convo.item,
+            });
+          })
+          .catch(() => {});
+      });
 
     res.status(201).json({ message });
   } catch (err) {

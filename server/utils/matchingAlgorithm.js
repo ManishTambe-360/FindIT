@@ -1,5 +1,6 @@
 const Item = require('../models/Item');
 const Match = require('../models/Match');
+const { notify } = require('./notify');
 
 // ---------- tuning ----------
 const MAX_DISTANCE_KM = 10; // candidates further than this are ignored
@@ -121,8 +122,32 @@ const findMatchesFor = async (itemOrId) => {
 
   // Drop old suggestions that no longer qualify (e.g. after an edit)
   const otherKey = isLost ? 'foundItem' : 'lostItem';
+  const existing = await Match.find({ [ownKey]: item._id }).select(otherKey).lean();
+  const known = new Set(existing.map((m) => m[otherKey].toString()));
+
   await Match.deleteMany({ [ownKey]: item._id, [otherKey]: { $nin: keepIds } });
   if (ops.length) await Match.bulkWrite(ops);
+
+  // Tell both posters about matches we haven't seen before
+  candidates
+    .filter((c) => keepIds.some((id) => id.equals(c._id)) && !known.has(c._id.toString()))
+    .forEach((c) => {
+      notify(item.postedBy, {
+        type: 'match',
+        title: `Possible match for "${item.title}"`,
+        body: `A ${c.type} report "${c.title}" looks similar.`,
+        link: `/items/${item._id}`,
+        item: item._id,
+      });
+      notify(c.postedBy, {
+        type: 'match',
+        title: `Possible match for "${c.title}"`,
+        body: `A new ${item.type} report "${item.title}" looks similar.`,
+        link: `/items/${c._id}`,
+        item: c._id,
+      });
+    });
+
   return ops.length;
 };
 
