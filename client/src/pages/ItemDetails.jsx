@@ -19,30 +19,38 @@ export default function ItemDetails() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [item, setItem] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loadedKey, setLoadedKey] = useState(null); // which id/user the current `item` belongs to
   const [active, setActive] = useState(0);
   const [nearby, setNearby] = useState([]);
-  const [myClaims, setMyClaims] = useState([]); // my claims on THIS item
+  const [claimsState, setMyClaims] = useState([]); // my claims on THIS item
+  const myClaims = user ? claimsState : [];
+
+  const pageKey = `${id}:${user?._id || ''}`;
+  const loading = loadedKey !== pageKey;
 
   const loadItem = () =>
     getItem(id)
-      .then((res) => setItem(res.data.item))
+      .then((res) => {
+        setItem(res.data.item);
+        setActive(0);
+      })
       .catch(() => setItem(null));
 
   const loadMyClaims = () => {
-    if (!user) return setMyClaims([]);
+    if (!user) return;
     getMyClaims()
       .then((res) => setMyClaims(res.data.claims.filter((c) => c.item?._id === id)))
       .catch(() => {});
   };
 
   useEffect(() => {
-    setLoading(true);
-    setActive(0);
-    loadItem().finally(() => setLoading(false));
-  }, [id, user?._id]); // eslint-disable-line react-hooks/exhaustive-deps
+    const key = pageKey;
+    loadItem().finally(() => setLoadedKey(key));
+  }, [pageKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(loadMyClaims, [id, user?._id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadMyClaims();
+  }, [pageKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Other open reports within 1 km of this item
   useEffect(() => {

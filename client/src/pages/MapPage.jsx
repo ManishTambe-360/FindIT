@@ -26,11 +26,12 @@ export default function MapPage() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState(initialFilters);
   const [data, setData] = useState({ items: [], total: 0, truncated: false });
-  const [loading, setLoading] = useState(true);
+  const [loadedFor, setLoadedFor] = useState(null); // filters snapshot the current data belongs to
+  const filtersKey = JSON.stringify(filters);
+  const loading = loadedFor !== filtersKey;
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
 
     const params = {};
     if (filters.type) params.type = filters.type;
@@ -45,10 +46,10 @@ export default function MapPage() {
     getMapItems(params)
       .then((res) => !cancelled && setData(res.data))
       .catch(() => toast.error('Could not load map items'))
-      .finally(() => !cancelled && setLoading(false));
+      .finally(() => !cancelled && setLoadedFor(filtersKey));
 
     return () => { cancelled = true; };
-  }, [filters]);
+  }, [filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (name, value) => setFilters({ ...filters, [name]: value });
 

@@ -19,10 +19,7 @@ export default function Navbar() {
 
   // Refresh the badge on every page change, and once a minute
   useEffect(() => {
-    if (!user) {
-      setPending(0);
-      return;
-    }
+    if (!user) return undefined; // badge isn't rendered when logged out
     let alive = true;
     const load = () =>
       getPendingCount()

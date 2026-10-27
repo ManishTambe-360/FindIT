@@ -47,7 +47,7 @@ export default function LocationPicker({ value, onChange }) {
       const p = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
       onChange(p);
       setFlyTo(p);
-    } catch (err) {
+    } catch {
       toast.error('Search failed');
     }
   };

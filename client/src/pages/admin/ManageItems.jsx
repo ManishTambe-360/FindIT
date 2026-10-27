@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AdminNav from '../../components/admin/AdminNav';
 import Loader from '../../components/common/Loader';
-import { Pager } from './ManageUsers';
+import Pager from '../../components/admin/Pager';
 import { getAdminItems } from '../../services/adminService';
 import { deleteItem, updateItemStatus } from '../../services/itemService';
 import { CATEGORIES, STATUS_STYLES, TYPE_STYLES, formatDate } from '../../utils/helpers';

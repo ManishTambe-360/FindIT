@@ -6,6 +6,7 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Notification = require('../models/Notification');
 const { deleteImages } = require('../config/cloudinary');
+const { disconnectUser } = require('../sockets/socketHandler');
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const paging = (q, def = 15) => {
@@ -139,6 +140,7 @@ exports.setBlocked = async (req, res, next) => {
     const user = await loadTargetUser(req, res);
     user.isBlocked = Boolean(req.body.blocked);
     await user.save();
+    if (user.isBlocked) disconnectUser(user._id);
     res.json({ user });
   } catch (err) {
     next(err);
@@ -183,6 +185,7 @@ exports.deleteUser = async (req, res, next) => {
       Notification.deleteMany({ $or: [{ user: user._id }, { item: { $in: itemIds } }] }),
     ]);
     await user.deleteOne();
+    disconnectUser(user._id);
 
     res.json({ message: `Deleted ${user.name} and ${itemIds.length} item(s)` });
   } catch (err) {

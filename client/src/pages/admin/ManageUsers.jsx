@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import AdminNav from '../../components/admin/AdminNav';
 import UserTable from '../../components/admin/UserTable';
+import Pager from '../../components/admin/Pager';
 import Loader from '../../components/common/Loader';
 import useAuth from '../../hooks/useAuth';
 import { deleteUser, getAdminUsers, setUserBlocked, setUserRole } from '../../services/adminService';
@@ -111,21 +112,6 @@ export default function ManageUsers() {
           <Pager page={data.page} pages={data.pages} onChange={(p) => update({ page: String(p) })} />
         </>
       )}
-    </div>
-  );
-}
-
-export function Pager({ page, pages, onChange }) {
-  if (pages <= 1) return null;
-  return (
-    <div className="mt-4 flex items-center justify-center gap-3 text-sm">
-      <button disabled={page <= 1} onClick={() => onChange(page - 1)} className="rounded-lg border bg-white px-3 py-1.5 disabled:opacity-40">
-        ← Prev
-      </button>
-      <span className="text-slate-500">Page {page} of {pages}</span>
-      <button disabled={page >= pages} onClick={() => onChange(page + 1)} className="rounded-lg border bg-white px-3 py-1.5 disabled:opacity-40">
-        Next →
-      </button>
     </div>
   );
 }

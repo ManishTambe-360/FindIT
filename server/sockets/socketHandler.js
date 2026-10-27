@@ -63,4 +63,9 @@ const initSocket = (httpServer) => {
   return io;
 };
 
-module.exports = { initSocket, emitToUser, isOnline };
+// Force-close every socket of a user (used when an admin blocks/deletes them)
+const disconnectUser = (userId) => {
+  if (io) io.in(userRoom(userId.toString())).disconnectSockets(true);
+};
+
+module.exports = { initSocket, emitToUser, isOnline, disconnectUser };
