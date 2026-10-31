@@ -1,19 +1,18 @@
 import { createContext, useEffect, useState } from 'react';
 import { fetchMe, loginUser, registerUser } from '../services/authService';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // only "loading" if there is a saved session to restore
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem('findit_token')));
 
   // On app load, restore the session if a token exists
   useEffect(() => {
     const token = localStorage.getItem('findit_token');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    if (!token) return;
     fetchMe()
       .then((res) => setUser(res.data.user))
       .catch(() => localStorage.removeItem('findit_token'))

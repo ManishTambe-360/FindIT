@@ -5,10 +5,12 @@ import ItemCard from '../../components/items/ItemCard';
 import Loader from '../../components/common/Loader';
 import useAuth from '../../hooks/useAuth';
 import { getMyItems } from '../../services/itemService';
+import { getMyMatchCounts } from '../../services/matchService';
 
 export default function MyReports() {
   const { user } = useAuth();
   const [items, setItems] = useState([]);
+  const [matchCounts, setMatchCounts] = useState({});
   const [tab, setTab] = useState('all');
   const [loading, setLoading] = useState(true);
 
@@ -17,6 +19,9 @@ export default function MyReports() {
       .then((res) => setItems(res.data.items))
       .catch(() => toast.error('Could not load your reports'))
       .finally(() => setLoading(false));
+    getMyMatchCounts()
+      .then((res) => setMatchCounts(res.data.counts))
+      .catch(() => {});
   }, []);
 
   const shown = tab === 'all' ? items : items.filter((i) => i.type === tab);
@@ -54,7 +59,16 @@ export default function MyReports() {
         <p className="py-16 text-center text-slate-500">Nothing here yet. Report your first item!</p>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {shown.map((item) => <ItemCard key={item._id} item={item} />)}
+          {shown.map((item) => (
+            <div key={item._id} className="relative">
+              <ItemCard item={item} />
+              {matchCounts[item._id] > 0 && (
+                <span className="pointer-events-none absolute bottom-[4.5rem] right-2 rounded-full bg-indigo-600 px-2.5 py-0.5 text-xs font-semibold text-white shadow">
+                  {matchCounts[item._id]} possible match{matchCounts[item._id] === 1 ? '' : 'es'}
+                </span>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

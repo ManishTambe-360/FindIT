@@ -4,10 +4,12 @@ import toast from 'react-hot-toast';
 import Loader from '../components/common/Loader';
 import ItemCard from '../components/items/ItemCard';
 import ClaimForm from '../components/items/ClaimForm';
+import MatchList from '../components/items/MatchList';
 import MapView from '../components/map/MapView';
 import useAuth from '../hooks/useAuth';
 import { deleteItem, getItem, getItems, updateItemStatus } from '../services/itemService';
 import { getMyClaims } from '../services/claimService';
+import { startConversation } from '../services/chatService';
 import { CLAIM_STYLES, STATUS_STYLES, TYPE_STYLES, formatDate } from '../utils/helpers';
 
 const MAX_ATTEMPTS = 3;
@@ -17,30 +19,38 @@ export default function ItemDetails() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [item, setItem] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loadedKey, setLoadedKey] = useState(null); // which id/user the current `item` belongs to
   const [active, setActive] = useState(0);
   const [nearby, setNearby] = useState([]);
-  const [myClaims, setMyClaims] = useState([]); // my claims on THIS item
+  const [claimsState, setMyClaims] = useState([]); // my claims on THIS item
+  const myClaims = user ? claimsState : [];
+
+  const pageKey = `${id}:${user?._id || ''}`;
+  const loading = loadedKey !== pageKey;
 
   const loadItem = () =>
     getItem(id)
-      .then((res) => setItem(res.data.item))
+      .then((res) => {
+        setItem(res.data.item);
+        setActive(0);
+      })
       .catch(() => setItem(null));
 
   const loadMyClaims = () => {
-    if (!user) return setMyClaims([]);
+    if (!user) return;
     getMyClaims()
       .then((res) => setMyClaims(res.data.claims.filter((c) => c.item?._id === id)))
       .catch(() => {});
   };
 
   useEffect(() => {
-    setLoading(true);
-    setActive(0);
-    loadItem().finally(() => setLoading(false));
-  }, [id, user?._id]); // eslint-disable-line react-hooks/exhaustive-deps
+    const key = pageKey;
+    loadItem().finally(() => setLoadedKey(key));
+  }, [pageKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(loadMyClaims, [id, user?._id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadMyClaims();
+  }, [pageKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Other open reports within 1 km of this item
   useEffect(() => {
@@ -91,6 +101,15 @@ export default function ItemDetails() {
   };
 
   const afterClaim = () => loadMyClaims();
+
+  const openChat = async () => {
+    try {
+      const res = await startConversation(item._id);
+      navigate(`/chats/${res.data.conversation._id}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not start chat');
+    }
+  };
 
   // ---------- the claim area (right column, bottom) ----------
   const renderClaimArea = () => {
@@ -226,8 +245,25 @@ export default function ItemDetails() {
           <div className="flex gap-2"><dt className="w-28 text-slate-500">Posted on</dt><dd>{formatDate(item.createdAt)}</dd></div>
         </dl>
 
+        {user && !canManage && (
+          <button
+            id="message-poster"
+            onClick={openChat}
+            className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+          >
+            Message {item.postedBy?.name?.split(' ')[0] || 'poster'}
+          </button>
+        )}
+
         {renderClaimArea()}
       </div>
+
+      {/* Suggested matches (poster/admin only) */}
+      {canManage && (
+        <div className="md:col-span-2">
+          <MatchList key={item._id} item={item} />
+        </div>
+      )}
 
       {/* Map */}
       <div className="md:col-span-2">

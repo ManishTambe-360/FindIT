@@ -34,7 +34,7 @@ export default function Browse() {
         }
         const res = await getItems(params);
         setData(res.data);
-      } catch (err) {
+      } catch {
         toast.error('Could not load items');
       } finally {
         setLoading(false);
